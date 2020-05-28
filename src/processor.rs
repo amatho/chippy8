@@ -1,11 +1,9 @@
-mod executor;
+mod fetch_execute;
+mod instructions;
 
 use crate::{display::DisplayBuffer, keyboard::KeyboardState, memory::Memory, timer::Timers};
-use executor::{OpcodeExecutor, ProgramCounterChange};
-use std::{
-    fmt::Debug,
-    time::{Duration, Instant},
-};
+use fetch_execute::OpcodeFetchExecute;
+use std::time::{Duration, Instant};
 use winit::event::VirtualKeyCode;
 
 pub struct Processor {
@@ -47,17 +45,7 @@ impl Processor {
         }
         self.last_cycle = now;
 
-        let pc = self.program_counter;
-        let opcode = Opcode::new(self.memory.read_byte(pc), self.memory.read_byte(pc + 1));
-
-        let pc_change = OpcodeExecutor::new(opcode).execute(self);
-
-        match pc_change {
-            ProgramCounterChange::Next => self.program_counter += 2,
-            ProgramCounterChange::Skip => self.program_counter += 4,
-            ProgramCounterChange::Jump(loc) => self.program_counter = loc,
-            ProgramCounterChange::Wait => (),
-        }
+        OpcodeFetchExecute::fetch(self).execute();
 
         self.timers.tick();
     }
@@ -68,37 +56,6 @@ impl Processor {
 
     pub fn handle_input(&mut self, key_code: VirtualKeyCode, pressed: bool) {
         self.keyboard_state.handle_input(key_code, pressed);
-    }
-}
-
-/// An opcode for decoding a CHIP-8 instruction.
-pub struct Opcode {
-    /// Stores the opcode's nibbles, starting at the highest 4 bits.
-    ///
-    /// Each nibble is guaranteed to be less than 16, i.e. only the lowest 4 bits are used.
-    /// `u8` is used as it's the smallest integer primitive for storing 4 bits.
-    nibbles: [u8; 4],
-}
-
-impl Opcode {
-    fn new(upper_byte: u8, lower_byte: u8) -> Self {
-        let nibbles = [
-            upper_byte >> 4,
-            upper_byte & 0x0F,
-            lower_byte >> 4,
-            lower_byte & 0x0F,
-        ];
-
-        Opcode { nibbles }
-    }
-}
-
-impl Debug for Opcode {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        for n in &self.nibbles {
-            write!(f, "{:X}", n)?;
-        }
-        Ok(())
     }
 }
 
