@@ -15,8 +15,8 @@ use winit::{
     window::WindowBuilder,
 };
 
-const WIDTH: u32 = 512;
-const HEIGHT: u32 = 256;
+const WINDOW_WIDTH: u32 = 512;
+const WINDOW_HEIGHT: u32 = 256;
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args();
@@ -31,14 +31,13 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("CHIP 8")
-        .with_inner_size(LogicalSize::new(WIDTH, HEIGHT))
-        .build(&event_loop)
-        .unwrap();
+        .with_inner_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT))
+        .build(&event_loop)?;
 
     let mut pixels = {
         let surface = Surface::create(&window);
-        let surface_texture = SurfaceTexture::new(WIDTH, HEIGHT, surface);
-        Pixels::new(64, 32, surface_texture).unwrap()
+        let surface_texture = SurfaceTexture::new(WINDOW_WIDTH, WINDOW_HEIGHT, surface);
+        Pixels::new(64, 32, surface_texture)?
     };
 
     let mut processor = Processor::new(&game_data);
