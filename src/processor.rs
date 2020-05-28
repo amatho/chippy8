@@ -1,6 +1,7 @@
 use crate::{display::DisplayBuffer, keyboard::KeyboardState, memory::Memory, timer::Timers};
 use std::{
     fmt::Debug,
+    ops::{BitOr, Shl},
     time::{Duration, Instant},
 };
 use winit::event::VirtualKeyCode;
@@ -47,256 +48,213 @@ impl Processor {
         let pc = self.program_counter;
         let opcode = Opcode::new(self.memory.read_byte(pc), self.memory.read_byte(pc + 1));
 
-        let pc_change = match opcode.uppermost_nibble() {
-            0x0 => match opcode.kk() {
-                0xE0 => {
-                    self.display_buf.clear();
-                    ProgramCounterChange::Next
-                }
-                0xEE => {
-                    let pc = self.stack.pop() as usize;
-                    ProgramCounterChange::Jump(pc)
-                }
-                _ => panic!("Invalid opcode {:X}", opcode.0),
-            },
-            0x1 => ProgramCounterChange::Jump(opcode.nnn() as usize),
-            0x2 => {
-                // Return from subroutine at next instruction
-                self.stack.push((pc + 2) as u16);
-                ProgramCounterChange::Jump(opcode.nnn() as usize)
-            }
-            0x3 => {
-                let x = opcode.x() as usize;
-                let kk = opcode.kk();
-                if self.registers.v[x] == kk {
-                    ProgramCounterChange::Skip
-                } else {
-                    ProgramCounterChange::Next
-                }
-            }
-            0x4 => {
-                let x = opcode.x() as usize;
-                let kk = opcode.kk();
-                if self.registers.v[x] != kk {
-                    ProgramCounterChange::Skip
-                } else {
-                    ProgramCounterChange::Next
-                }
-            }
-            0x5 => {
-                let x = opcode.x() as usize;
-                let y = opcode.y() as usize;
-                if self.registers.v[x] == self.registers.v[y] {
-                    ProgramCounterChange::Skip
-                } else {
-                    ProgramCounterChange::Next
-                }
-            }
-            0x6 => {
-                let x = opcode.x() as usize;
-                let kk = opcode.kk();
-                self.registers.v[x] = kk;
+        let pc_change = match opcode.nibbles {
+            [0x0, 0x0, 0xE, 0x0] => {
+                self.display_buf.clear();
                 ProgramCounterChange::Next
             }
-            0x7 => {
-                let x = opcode.x() as usize;
-                let kk = opcode.kk();
+            [0x0, 0x0, 0xE, 0xE] => {
+                let pc = self.stack.pop() as usize;
+                ProgramCounterChange::Jump(pc)
+            }
+            [0x1, nnn @ ..] => ProgramCounterChange::Jump(combine_nibbles(nnn)),
+            [0x2, nnn @ ..] => {
+                // Return from subroutine at next instruction
+                self.stack.push((pc + 2) as u16);
+                ProgramCounterChange::Jump(combine_nibbles(nnn))
+            }
+            [0x3, x, kk @ ..] => {
+                let kk = combine_nibbles(kk);
+                if self.registers.v[x as usize] == kk {
+                    ProgramCounterChange::Skip
+                } else {
+                    ProgramCounterChange::Next
+                }
+            }
+            [0x4, x, kk @ ..] => {
+                let kk = combine_nibbles(kk);
+                if self.registers.v[x as usize] != kk {
+                    ProgramCounterChange::Skip
+                } else {
+                    ProgramCounterChange::Next
+                }
+            }
+            [0x5, x, y, 0x0] => {
+                if self.registers.v[x as usize] == self.registers.v[y as usize] {
+                    ProgramCounterChange::Skip
+                } else {
+                    ProgramCounterChange::Next
+                }
+            }
+            [0x6, x, kk @ ..] => {
+                let kk = combine_nibbles(kk);
+                self.registers.v[x as usize] = kk;
+                ProgramCounterChange::Next
+            }
+            [0x7, x, kk @ ..] => {
+                let x = x as usize;
+                let kk = combine_nibbles(kk);
                 self.registers.v[x] = self.registers.v[x].wrapping_add(kk);
                 ProgramCounterChange::Next
             }
-            0x8 => match opcode.n() {
-                0x0 => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    self.registers.v[x] = self.registers.v[y];
-                    ProgramCounterChange::Next
-                }
-                0x1 => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    self.registers.v[x] |= self.registers.v[y];
-                    ProgramCounterChange::Next
-                }
-                0x2 => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    self.registers.v[x] &= self.registers.v[y];
-                    ProgramCounterChange::Next
-                }
-                0x3 => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    self.registers.v[x] ^= self.registers.v[y];
-                    ProgramCounterChange::Next
-                }
-                0x4 => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    let (res, overflowed) =
-                        self.registers.v[x].overflowing_add(self.registers.v[y]);
-                    self.registers.v[x] = res;
-                    self.registers.v[0xF] = overflowed as u8;
-                    ProgramCounterChange::Next
-                }
-                0x5 => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    let (res, overflowed) =
-                        self.registers.v[x].overflowing_sub(self.registers.v[y]);
-                    self.registers.v[x] = res;
-                    self.registers.v[0xF] = !overflowed as u8;
-                    ProgramCounterChange::Next
-                }
-                0x6 => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    let v_y = self.registers.v[y];
-                    let lsb = v_y & 0x1;
-                    self.registers.v[x] = v_y >> 1;
-                    self.registers.v[0xF] = lsb;
-                    ProgramCounterChange::Next
-                }
-                0x7 => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    let (res, overflowed) =
-                        self.registers.v[y].overflowing_sub(self.registers.v[x]);
-                    self.registers.v[x] = res;
-                    self.registers.v[0xF] = !overflowed as u8;
-                    ProgramCounterChange::Next
-                }
-                0xE => {
-                    let x = opcode.x() as usize;
-                    let y = opcode.y() as usize;
-                    let v_y = self.registers.v[y];
-                    let msb = v_y >> 7;
-                    self.registers.v[x] = v_y << 1;
-                    self.registers.v[0xF] = msb;
-                    ProgramCounterChange::Next
-                }
-                _ => panic!("Invalid opcode {:X}", opcode.0),
-            },
-            0x9 if opcode.n() == 0 => {
-                let x = opcode.x() as usize;
-                let y = opcode.y() as usize;
-                if self.registers.v[x] != self.registers.v[y] {
+            [0x8, x, y, 0x0] => {
+                self.registers.v[x as usize] = self.registers.v[y as usize];
+                ProgramCounterChange::Next
+            }
+            [0x8, x, y, 0x1] => {
+                self.registers.v[x as usize] |= self.registers.v[y as usize];
+                ProgramCounterChange::Next
+            }
+            [0x8, x, y, 0x2] => {
+                self.registers.v[x as usize] &= self.registers.v[y as usize];
+                ProgramCounterChange::Next
+            }
+            [0x8, x, y, 0x3] => {
+                self.registers.v[x as usize] ^= self.registers.v[y as usize];
+                ProgramCounterChange::Next
+            }
+            [0x8, x, y, 0x4] => {
+                let v_y = self.registers.v[y as usize];
+                let v_x = &mut self.registers.v[x as usize];
+                let (sum, overflowed) = v_x.overflowing_add(v_y);
+                *v_x = sum;
+                self.registers.v[0xF] = overflowed as u8;
+                ProgramCounterChange::Next
+            }
+            [0x8, x, y, 0x5] => {
+                let v_y = self.registers.v[y as usize];
+                let v_x = &mut self.registers.v[x as usize];
+                let (diff, overflowed) = v_x.overflowing_sub(v_y);
+                *v_x = diff;
+                self.registers.v[0xF] = !overflowed as u8;
+                ProgramCounterChange::Next
+            }
+            [0x8, x, y, 0x6] => {
+                let x = x as usize;
+                let y = y as usize;
+                let v_y = self.registers.v[y];
+                let lsb = v_y & 0x1;
+                self.registers.v[x] = v_y >> 1;
+                self.registers.v[0xF] = lsb;
+                ProgramCounterChange::Next
+            }
+            [0x8, x, y, 0x7] => {
+                let v_y = self.registers.v[y as usize];
+                let v_x = &mut self.registers.v[x as usize];
+                let (diff, overflowed) = v_y.overflowing_sub(*v_x);
+                *v_x = diff;
+                self.registers.v[0xF] = !overflowed as u8;
+                ProgramCounterChange::Next
+            }
+            [0x8, x, y, 0xE] => {
+                let v_y = self.registers.v[y as usize];
+                let msb = v_y >> 7;
+                self.registers.v[x as usize] = v_y << 1;
+                self.registers.v[0xF] = msb;
+                ProgramCounterChange::Next
+            }
+            [0x9, x, y, 0x0] => {
+                if self.registers.v[x as usize] != self.registers.v[y as usize] {
                     ProgramCounterChange::Skip
                 } else {
                     ProgramCounterChange::Next
                 }
             }
-            0xA => {
-                self.registers.i = opcode.nnn();
+            [0xA, nnn @ ..] => {
+                self.registers.i = combine_nibbles(nnn);
                 ProgramCounterChange::Next
             }
-            0xB => {
-                let loc = opcode.nnn() + self.registers.v[0x0] as u16;
+            [0xB, nnn @ ..] => {
+                let nnn: u16 = combine_nibbles(nnn);
+                let loc = nnn + self.registers.v[0x0] as u16;
                 ProgramCounterChange::Jump(loc as usize)
             }
-            0xC => {
-                let x = opcode.x() as usize;
-                let kk = opcode.kk();
+            [0xC, x, kk @ ..] => {
+                let kk: u8 = combine_nibbles(kk);
                 let rand_byte = rand::random::<u8>();
-                self.registers.v[x] = rand_byte & kk;
+                self.registers.v[x as usize] = rand_byte & kk;
                 ProgramCounterChange::Next
             }
-            0xD => {
-                let x = opcode.x() as usize;
-                let y = opcode.y() as usize;
-                let n = opcode.n() as usize;
-                let i = self.registers.i as usize;
-                let x_pos = self.registers.v[x] as usize;
-                let y_pos = self.registers.v[y] as usize;
+            [0xD, x, y, n] => {
+                let x_pos = self.registers.v[x as usize] as usize;
+                let y_pos = self.registers.v[y as usize] as usize;
 
-                let sprite = self.memory.read_sprite(i, n);
+                let sprite = self
+                    .memory
+                    .read_sprite(self.registers.i as usize, n as usize);
                 let collision = self.display_buf.write_sprite(sprite, x_pos, y_pos);
                 self.registers.v[0xF] = collision as u8;
                 ProgramCounterChange::Next
             }
-            0xE => match opcode.kk() {
-                0x9E => {
-                    let x = opcode.x() as usize;
-                    let hex_key = self.registers.v[x] as usize;
-                    if self.keyboard_state.key[hex_key] {
-                        ProgramCounterChange::Skip
-                    } else {
-                        ProgramCounterChange::Next
-                    }
-                }
-                0xA1 => {
-                    let x = opcode.x() as usize;
-                    let hex_key = self.registers.v[x] as usize;
-                    if self.keyboard_state.key[hex_key] {
-                        ProgramCounterChange::Next
-                    } else {
-                        ProgramCounterChange::Skip
-                    }
-                }
-                _ => panic!("Invalid opcode {:X}", opcode.0),
-            },
-            0xF => match opcode.kk() {
-                0x07 => {
-                    let x = opcode.x() as usize;
-                    self.registers.v[x] = self.timers.delay_timer;
+            [0xE, x, 0x9, 0xE] => {
+                let hex_key = self.registers.v[x as usize] as usize;
+                if self.keyboard_state.key[hex_key] {
+                    ProgramCounterChange::Skip
+                } else {
                     ProgramCounterChange::Next
                 }
-                0x0A => {
-                    let x = opcode.x() as usize;
-                    if let Some(key) = self.keyboard_state.any_pressed() {
-                        self.registers.v[x] = key as u8;
-                        ProgramCounterChange::Next
-                    } else {
-                        ProgramCounterChange::Wait
-                    }
-                }
-                0x15 => {
-                    let x = opcode.x() as usize;
-                    self.timers.delay_timer = self.registers.v[x];
+            }
+            [0xE, x, 0xA, 0x1] => {
+                let hex_key = self.registers.v[x as usize] as usize;
+                if self.keyboard_state.key[hex_key] {
                     ProgramCounterChange::Next
+                } else {
+                    ProgramCounterChange::Skip
                 }
-                0x18 => {
-                    let x = opcode.x() as usize;
-                    self.timers.sound_timer = self.registers.v[x];
+            }
+            [0xF, x, 0x0, 0x7] => {
+                self.registers.v[x as usize] = self.timers.delay_timer;
+                ProgramCounterChange::Next
+            }
+            [0xF, x, 0x0, 0xA] => {
+                if let Some(key) = self.keyboard_state.any_pressed() {
+                    self.registers.v[x as usize] = key as u8;
                     ProgramCounterChange::Next
+                } else {
+                    ProgramCounterChange::Wait
                 }
-                0x1E => {
-                    let x = opcode.x() as usize;
-                    self.registers.i += self.registers.v[x] as u16;
-                    ProgramCounterChange::Next
+            }
+            [0xF, x, 0x1, 0x5] => {
+                self.timers.delay_timer = self.registers.v[x as usize];
+                ProgramCounterChange::Next
+            }
+            [0xF, x, 0x1, 0x8] => {
+                self.timers.sound_timer = self.registers.v[x as usize];
+                ProgramCounterChange::Next
+            }
+            [0xF, x, 0x1, 0xE] => {
+                self.registers.i += self.registers.v[x as usize] as u16;
+                ProgramCounterChange::Next
+            }
+            [0xF, x, 0x2, 0x9] => {
+                self.registers.i = self.memory.sprite_address(self.registers.v[x as usize]) as u16;
+                ProgramCounterChange::Next
+            }
+            [0xF, x, 0x3, 0x3] => {
+                let value = self.registers.v[x as usize];
+                let i = self.registers.i as usize;
+                self.memory.write_byte(i, value / 100);
+                self.memory.write_byte(i + 1, value % 100 / 10);
+                self.memory.write_byte(i + 2, value % 10);
+                ProgramCounterChange::Next
+            }
+            [0xF, x, 0x5, 0x5] => {
+                let x = x as usize;
+                let i = self.registers.i as usize;
+                for offset in 0..=x {
+                    self.memory.write_byte(i + offset, self.registers.v[offset]);
                 }
-                0x29 => {
-                    let x = opcode.x() as usize;
-                    self.registers.i = self.memory.sprite_address(self.registers.v[x]) as u16;
-                    ProgramCounterChange::Next
+                ProgramCounterChange::Next
+            }
+            [0xF, x, 0x6, 0x5] => {
+                let x = x as usize;
+                let i = self.registers.i as usize;
+                for offset in 0..=x {
+                    self.registers.v[offset] = self.memory.read_byte(i + offset);
                 }
-                0x33 => {
-                    let x = opcode.x() as usize;
-                    let value = self.registers.v[x];
-                    let i = self.registers.i as usize;
-                    self.memory.write_byte(i, value / 100);
-                    self.memory.write_byte(i + 1, value % 100 / 10);
-                    self.memory.write_byte(i + 2, value % 10);
-                    ProgramCounterChange::Next
-                }
-                0x55 => {
-                    let x = opcode.x() as usize;
-                    let i = self.registers.i as usize;
-                    for offset in 0..=x {
-                        self.memory.write_byte(i + offset, self.registers.v[offset]);
-                    }
-                    ProgramCounterChange::Next
-                }
-                0x65 => {
-                    let x = opcode.x() as usize;
-                    let i = self.registers.i as usize;
-                    for offset in 0..=x {
-                        self.registers.v[offset] = self.memory.read_byte(i + offset);
-                    }
-                    ProgramCounterChange::Next
-                }
-                _ => panic!("Invalid opcode {:X}", opcode.0),
-            },
-            _ => panic!("Invalid opcode {:X}", opcode.0),
+                ProgramCounterChange::Next
+            }
+            _ => panic!("invalid opcode: {:?}", opcode),
         };
 
         match pc_change {
@@ -325,48 +283,30 @@ enum ProgramCounterChange {
     Wait,
 }
 
-struct Opcode(u16);
+struct Opcode {
+    /// Stores the opcode's nibbles, starting at the highest 4 bits
+    nibbles: [u8; 4],
+}
 
 impl Opcode {
     fn new(upper_byte: u8, lower_byte: u8) -> Self {
-        let combined = ((upper_byte as u16) << 8) | lower_byte as u16;
-        Opcode(combined)
-    }
+        let nibbles = [
+            upper_byte >> 4,
+            upper_byte & 0x0F,
+            lower_byte >> 4,
+            lower_byte & 0x0F,
+        ];
 
-    /// Lowest 12 bits
-    fn nnn(&self) -> u16 {
-        self.0 & 0x0FFF
-    }
-
-    /// Lowest 4 bits
-    fn n(&self) -> u8 {
-        (self.0 & 0x000F) as u8
-    }
-
-    /// Lower 4 bits of the higher byte
-    fn x(&self) -> u8 {
-        ((self.0 & 0x0F00) >> 8) as u8
-    }
-
-    /// Upper 4 bits of the lower byte
-    fn y(&self) -> u8 {
-        ((self.0 & 0x00F0) >> 4) as u8
-    }
-
-    /// Lower byte
-    fn kk(&self) -> u8 {
-        self.0 as u8
-    }
-
-    /// Highest 4 bits
-    fn uppermost_nibble(&self) -> u8 {
-        (self.0 >> 12) as u8
+        Opcode { nibbles }
     }
 }
 
 impl Debug for Opcode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:X}", self.0)
+        for n in &self.nibbles {
+            write!(f, "{:X}", n)?;
+        }
+        Ok(())
     }
 }
 
@@ -400,8 +340,23 @@ impl Stack {
     }
 
     fn pop(&mut self) -> u16 {
-        let val = self.inner.pop().expect("Unexpected end of stack");
+        let val = self.inner.pop().expect("unexpected end of stack");
         self.stack_pointer -= 1;
         val
     }
+}
+
+fn combine_nibbles<T, U>(nibbles: T) -> U
+where
+    T: AsRef<[u8]>,
+    U: From<u8> + Shl<Output = U> + BitOr<Output = U>,
+{
+    let nibbles = nibbles.as_ref();
+    assert!((nibbles.len() / 2) <= std::mem::size_of::<T>());
+    let mut iter = nibbles.iter();
+    let mut result = U::from(*iter.next().expect("nibbles must have at least 1 element"));
+    for &nibble in iter {
+        result = result << U::from(4) | U::from(nibble);
+    }
+    result
 }
