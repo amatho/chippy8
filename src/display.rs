@@ -24,7 +24,7 @@ impl DisplayBuffer {
 
         for (offset_y, &byte) in sprite.iter().enumerate() {
             for (offset_x, &bit) in to_bits(byte).iter().enumerate() {
-                if self.set_pos((x + offset_x) % WIDTH, (y + offset_y) % HEIGHT, bit) {
+                if self.set_pos(x + offset_x, y + offset_y, bit) {
                     collision = true;
                 }
             }
@@ -40,8 +40,10 @@ impl DisplayBuffer {
     }
 
     fn set_pos(&mut self, x: usize, y: usize, val: bool) -> bool {
-        let x = x % WIDTH;
-        let y = y % HEIGHT;
+        if x >= WIDTH || y >= HEIGHT {
+            return false;
+        }
+
         let index = y * WIDTH + x;
 
         let collision = self.buffer[index] & val;

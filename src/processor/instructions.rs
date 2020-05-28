@@ -163,6 +163,11 @@ impl<'a> InstructionExecutor<'a> {
         let x_pos = p.registers.v[x as usize] as usize;
         let y_pos = p.registers.v[y as usize] as usize;
 
+        if x_pos > 0x3F || y_pos > 0x1F {
+            p.registers.v[0xF] = 0;
+            return ProgramCounterChange::Next;
+        }
+
         let sprite = p.memory.read_sprite(p.registers.i as usize, n as usize);
         let collision = p.display_buf.write_sprite(sprite, x_pos, y_pos);
         p.registers.v[0xF] = collision as u8;
