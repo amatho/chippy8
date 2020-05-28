@@ -33,7 +33,7 @@ impl<'a> InstructionExecutor<'a> {
         self.p.stack.push((self.p.program_counter + 2) as u16);
         ProgramCounterChange::Jump(nnn)
     }
-    // 3xkk
+
     pub fn instr_3xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
         if self.p.registers.v[x as usize] == kk {
             ProgramCounterChange::Skip
@@ -41,7 +41,7 @@ impl<'a> InstructionExecutor<'a> {
             ProgramCounterChange::Next
         }
     }
-    // 4xkk
+
     pub fn instr_4xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
         if self.p.registers.v[x as usize] != kk {
             ProgramCounterChange::Skip
@@ -49,7 +49,7 @@ impl<'a> InstructionExecutor<'a> {
             ProgramCounterChange::Next
         }
     }
-    // 5xy0
+
     pub fn instr_5xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         if self.p.registers.v[x as usize] == self.p.registers.v[y as usize] {
             ProgramCounterChange::Skip
@@ -57,38 +57,38 @@ impl<'a> InstructionExecutor<'a> {
             ProgramCounterChange::Next
         }
     }
-    // 6xkk
+
     pub fn instr_6xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
         self.p.registers.v[x as usize] = kk;
         ProgramCounterChange::Next
     }
-    // 7xkk
+
     pub fn instr_7xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
         let x = x as usize;
         self.p.registers.v[x] = self.p.registers.v[x].wrapping_add(kk);
         ProgramCounterChange::Next
     }
-    // 8xy0
+
     pub fn instr_8xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         self.p.registers.v[x as usize] = self.p.registers.v[y as usize];
         ProgramCounterChange::Next
     }
-    // 8xy1
+
     pub fn instr_8xy1(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         self.p.registers.v[x as usize] |= self.p.registers.v[y as usize];
         ProgramCounterChange::Next
     }
-    // 8xy2
+
     pub fn instr_8xy2(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         self.p.registers.v[x as usize] &= self.p.registers.v[y as usize];
         ProgramCounterChange::Next
     }
-    // 8xy3
+
     pub fn instr_8xy3(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         self.p.registers.v[x as usize] ^= self.p.registers.v[y as usize];
         ProgramCounterChange::Next
     }
-    // 8xy4
+
     pub fn instr_8xy4(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         let v_y = self.p.registers.v[y as usize];
         let v_x = &mut self.p.registers.v[x as usize];
@@ -97,7 +97,7 @@ impl<'a> InstructionExecutor<'a> {
         self.p.registers.v[0xF] = overflowed as u8;
         ProgramCounterChange::Next
     }
-    // 8xy5
+
     pub fn instr_8xy5(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         let v_y = self.p.registers.v[y as usize];
         let v_x = &mut self.p.registers.v[x as usize];
@@ -106,7 +106,7 @@ impl<'a> InstructionExecutor<'a> {
         self.p.registers.v[0xF] = !overflowed as u8;
         ProgramCounterChange::Next
     }
-    // 8xy6
+
     pub fn instr_8xy6(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         let x = x as usize;
         let y = y as usize;
@@ -116,7 +116,7 @@ impl<'a> InstructionExecutor<'a> {
         self.p.registers.v[0xF] = lsb;
         ProgramCounterChange::Next
     }
-    // 8xy7
+
     pub fn instr_8xy7(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         let v_y = self.p.registers.v[y as usize];
         let v_x = &mut self.p.registers.v[x as usize];
@@ -125,7 +125,7 @@ impl<'a> InstructionExecutor<'a> {
         self.p.registers.v[0xF] = !overflowed as u8;
         ProgramCounterChange::Next
     }
-    // 8xyE
+
     pub fn instr_8xyE(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         let v_y = self.p.registers.v[y as usize];
         let msb = v_y >> 7;
@@ -133,7 +133,7 @@ impl<'a> InstructionExecutor<'a> {
         self.p.registers.v[0xF] = msb;
         ProgramCounterChange::Next
     }
-    // 9xy0
+
     pub fn instr_9xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         if self.p.registers.v[x as usize] != self.p.registers.v[y as usize] {
             ProgramCounterChange::Skip
@@ -141,23 +141,23 @@ impl<'a> InstructionExecutor<'a> {
             ProgramCounterChange::Next
         }
     }
-    // Annn
+
     pub fn instr_Annn(&mut self, nnn: u16) -> ProgramCounterChange {
         self.p.registers.i = nnn;
         ProgramCounterChange::Next
     }
-    // Bnnn
+
     pub fn instr_Bnnn(&mut self, nnn: u16) -> ProgramCounterChange {
         let loc = nnn + self.p.registers.v[0x0] as u16;
         ProgramCounterChange::Jump(loc as usize)
     }
-    // Cxkk
+
     pub fn instr_Cxkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
         let rand_byte = rand::random::<u8>();
         self.p.registers.v[x as usize] = rand_byte & kk;
         ProgramCounterChange::Next
     }
-    // Dxyn
+
     pub fn instr_Dxyn(&mut self, x: u8, y: u8, n: u8) -> ProgramCounterChange {
         let p = &mut self.p;
         let x_pos = p.registers.v[x as usize] as usize;
@@ -168,7 +168,7 @@ impl<'a> InstructionExecutor<'a> {
         p.registers.v[0xF] = collision as u8;
         ProgramCounterChange::Next
     }
-    // Ex9E
+
     pub fn instr_Ex9E(&mut self, x: u8) -> ProgramCounterChange {
         let hex_key = self.p.registers.v[x as usize] as usize;
         if self.p.keyboard_state.key[hex_key] {
@@ -177,7 +177,7 @@ impl<'a> InstructionExecutor<'a> {
             ProgramCounterChange::Next
         }
     }
-    // ExA1
+
     pub fn instr_ExA1(&mut self, x: u8) -> ProgramCounterChange {
         let hex_key = self.p.registers.v[x as usize] as usize;
         if self.p.keyboard_state.key[hex_key] {
@@ -186,12 +186,12 @@ impl<'a> InstructionExecutor<'a> {
             ProgramCounterChange::Skip
         }
     }
-    // Fx07
+
     pub fn instr_Fx07(&mut self, x: u8) -> ProgramCounterChange {
         self.p.registers.v[x as usize] = self.p.timers.delay_timer;
         ProgramCounterChange::Next
     }
-    // Fx0A
+
     pub fn instr_Fx0A(&mut self, x: u8) -> ProgramCounterChange {
         if let Some(key) = self.p.keyboard_state.any_pressed() {
             self.p.registers.v[x as usize] = key as u8;
@@ -200,27 +200,27 @@ impl<'a> InstructionExecutor<'a> {
             ProgramCounterChange::Wait
         }
     }
-    // Fx15
+
     pub fn instr_Fx15(&mut self, x: u8) -> ProgramCounterChange {
         self.p.timers.delay_timer = self.p.registers.v[x as usize];
         ProgramCounterChange::Next
     }
-    // Fx18
+
     pub fn instr_Fx18(&mut self, x: u8) -> ProgramCounterChange {
         self.p.timers.sound_timer = self.p.registers.v[x as usize];
         ProgramCounterChange::Next
     }
-    // Fx1E
+
     pub fn instr_Fx1E(&mut self, x: u8) -> ProgramCounterChange {
         self.p.registers.i += self.p.registers.v[x as usize] as u16;
         ProgramCounterChange::Next
     }
-    // Fx29
+
     pub fn instr_Fx29(&mut self, x: u8) -> ProgramCounterChange {
         self.p.registers.i = self.p.memory.sprite_address(self.p.registers.v[x as usize]) as u16;
         ProgramCounterChange::Next
     }
-    // Fx33
+
     pub fn instr_Fx33(&mut self, x: u8) -> ProgramCounterChange {
         let value = self.p.registers.v[x as usize];
         let i = self.p.registers.i as usize;
@@ -229,7 +229,7 @@ impl<'a> InstructionExecutor<'a> {
         self.p.memory.write_byte(i + 2, value % 10);
         ProgramCounterChange::Next
     }
-    // Fx55
+
     pub fn instr_Fx55(&mut self, x: u8) -> ProgramCounterChange {
         let x = x as usize;
         let i = self.p.registers.i as usize;
@@ -240,7 +240,7 @@ impl<'a> InstructionExecutor<'a> {
         }
         ProgramCounterChange::Next
     }
-    // Fx65
+
     pub fn instr_Fx65(&mut self, x: u8) -> ProgramCounterChange {
         let x = x as usize;
         let i = self.p.registers.i as usize;
