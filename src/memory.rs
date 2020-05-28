@@ -38,10 +38,38 @@ impl Memory {
         self.bytes[address] = value;
     }
 
+    /// Get the address in memory of the given hexadecimal sprite.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given sprite is outside of 0x0 through 0xF
     pub fn sprite_address(&self, hex_sprite: u8) -> usize {
-        hex_sprite as usize * 5
+        match hex_sprite {
+            0x0 => 0,
+            0x1 => 5,
+            0x2 => 10,
+            0x3 => 15,
+            0x4 => 20,
+            0x5 => 25,
+            0x6 => 30,
+            0x7 => 35,
+            0x8 => 40,
+            0x9 => 45,
+            0xA => 50,
+            0xB => 55,
+            0xC => 60,
+            0xD => 65,
+            0xE => 70,
+            0xF => 75,
+            _ => panic!("invalid sprite: tried to get address of invalid sprite"),
+        }
     }
 
+    /// Reads a sprite of `length` bytes, starting at `address`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given address and length is out of bounds.
     pub fn read_sprite(&self, address: usize, length: usize) -> &[u8] {
         &self.bytes[address..address + length]
     }
