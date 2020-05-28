@@ -283,8 +283,12 @@ enum ProgramCounterChange {
     Wait,
 }
 
+/// An opcode for decoding a CHIP-8 instruction.
 struct Opcode {
-    /// Stores the opcode's nibbles, starting at the highest 4 bits
+    /// Stores the opcode's nibbles, starting at the highest 4 bits.
+    ///
+    /// Each nibble is guaranteed to be less than 16, i.e. only the lowest 4 bits are used.
+    /// `u8` is used as it's the smallest integer primitive for storing 4 bits.
     nibbles: [u8; 4],
 }
 
