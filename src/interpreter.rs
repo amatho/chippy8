@@ -6,7 +6,7 @@ use fetch_execute::OpcodeFetchExecute;
 use std::time::{Duration, Instant};
 use winit::event::VirtualKeyCode;
 
-pub struct Processor {
+pub struct Interpreter {
     memory: Memory,
     registers: Registers,
     stack: Stack,
@@ -19,12 +19,12 @@ pub struct Processor {
     last_cycle: Instant,
 }
 
-impl Processor {
+impl Interpreter {
     pub fn new(rom: &[u8]) -> Self {
         let mut memory = Memory::new();
         memory.load_rom(rom);
 
-        Processor {
+        Interpreter {
             memory,
             registers: Registers::new(),
             stack: Stack::new(),

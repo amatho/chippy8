@@ -1,11 +1,11 @@
 mod display;
+mod interpreter;
 mod keyboard;
 mod memory;
-mod processor;
 mod timer;
 
+use interpreter::Interpreter;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
-use processor::Processor;
 use std::fs::File;
 use std::io::Read;
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -40,7 +40,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         Pixels::new(64, 32, surface_texture)?
     };
 
-    let mut processor = Processor::new(&game_data);
+    let mut processor = Interpreter::new(&game_data);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;

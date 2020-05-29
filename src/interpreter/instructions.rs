@@ -1,16 +1,16 @@
-use super::Processor;
+use super::Interpreter;
 
 pub struct InstructionExecutor<'a> {
-    p: &'a mut Processor,
+    p: &'a mut Interpreter,
 }
 
 #[allow(non_snake_case)]
 impl<'a> InstructionExecutor<'a> {
-    pub fn new(p: &'a mut Processor) -> Self {
+    pub fn new(p: &'a mut Interpreter) -> Self {
         Self { p }
     }
 
-    pub fn close(self) -> &'a mut Processor {
+    pub fn close(self) -> &'a mut Interpreter {
         self.p
     }
 

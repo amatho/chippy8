@@ -1,6 +1,6 @@
 use super::{
     instructions::{InstructionExecutor, ProgramCounterChange},
-    Processor,
+    Interpreter,
 };
 use std::{
     fmt::Debug,
@@ -44,7 +44,7 @@ pub struct OpcodeFetchExecute<'a> {
 }
 
 impl<'a> OpcodeFetchExecute<'a> {
-    pub fn fetch(p: &'a mut Processor) -> Self {
+    pub fn fetch(p: &'a mut Interpreter) -> Self {
         let opcode = Opcode::new(
             p.memory.read_byte(p.program_counter),
             p.memory.read_byte(p.program_counter + 1),
