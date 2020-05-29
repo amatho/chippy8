@@ -3,6 +3,7 @@ name = "chippy8"
 version = "0.1.0"
 authors = ["Amandus Søve Thorsrud <ama.thorsrud@gmail.com>"]
 edition = "2018"
+license = "MIT"
 
 [dependencies]
 pixels = "0.0.4"
