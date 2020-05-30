@@ -37,7 +37,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_3xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
-        if self.interp.registers.v[x as usize] == kk {
+        if self.interp.reg_v[x as usize] == kk {
             ProgramCounterChange::Skip
         } else {
             ProgramCounterChange::Next
@@ -45,7 +45,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_4xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
-        if self.interp.registers.v[x as usize] != kk {
+        if self.interp.reg_v[x as usize] != kk {
             ProgramCounterChange::Skip
         } else {
             ProgramCounterChange::Next
@@ -53,7 +53,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_5xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        if self.interp.registers.v[x as usize] == self.interp.registers.v[y as usize] {
+        if self.interp.reg_v[x as usize] == self.interp.reg_v[y as usize] {
             ProgramCounterChange::Skip
         } else {
             ProgramCounterChange::Next
@@ -61,83 +61,83 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_6xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
-        self.interp.registers.v[x as usize] = kk;
+        self.interp.reg_v[x as usize] = kk;
         ProgramCounterChange::Next
     }
 
     pub fn instr_7xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
         let x = x as usize;
-        self.interp.registers.v[x] = self.interp.registers.v[x].wrapping_add(kk);
+        self.interp.reg_v[x] = self.interp.reg_v[x].wrapping_add(kk);
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        self.interp.registers.v[x as usize] = self.interp.registers.v[y as usize];
+        self.interp.reg_v[x as usize] = self.interp.reg_v[y as usize];
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy1(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        self.interp.registers.v[x as usize] |= self.interp.registers.v[y as usize];
+        self.interp.reg_v[x as usize] |= self.interp.reg_v[y as usize];
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy2(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        self.interp.registers.v[x as usize] &= self.interp.registers.v[y as usize];
+        self.interp.reg_v[x as usize] &= self.interp.reg_v[y as usize];
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy3(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        self.interp.registers.v[x as usize] ^= self.interp.registers.v[y as usize];
+        self.interp.reg_v[x as usize] ^= self.interp.reg_v[y as usize];
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy4(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        let v_y = self.interp.registers.v[y as usize];
-        let v_x = &mut self.interp.registers.v[x as usize];
+        let v_y = self.interp.reg_v[y as usize];
+        let v_x = &mut self.interp.reg_v[x as usize];
         let (sum, overflowed) = v_x.overflowing_add(v_y);
         *v_x = sum;
-        self.interp.registers.v[0xF] = overflowed as u8;
+        self.interp.reg_v[0xF] = overflowed as u8;
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy5(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        let v_y = self.interp.registers.v[y as usize];
-        let v_x = &mut self.interp.registers.v[x as usize];
+        let v_y = self.interp.reg_v[y as usize];
+        let v_x = &mut self.interp.reg_v[x as usize];
         let (diff, overflowed) = v_x.overflowing_sub(v_y);
         *v_x = diff;
-        self.interp.registers.v[0xF] = !overflowed as u8;
+        self.interp.reg_v[0xF] = !overflowed as u8;
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy6(&mut self, x: u8, y: u8) -> ProgramCounterChange {
         let x = x as usize;
         let y = y as usize;
-        let v_y = self.interp.registers.v[y];
+        let v_y = self.interp.reg_v[y];
         let lsb = v_y & 0x1;
-        self.interp.registers.v[x] = v_y >> 1;
-        self.interp.registers.v[0xF] = lsb;
+        self.interp.reg_v[x] = v_y >> 1;
+        self.interp.reg_v[0xF] = lsb;
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy7(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        let v_y = self.interp.registers.v[y as usize];
-        let v_x = &mut self.interp.registers.v[x as usize];
+        let v_y = self.interp.reg_v[y as usize];
+        let v_x = &mut self.interp.reg_v[x as usize];
         let (diff, overflowed) = v_y.overflowing_sub(*v_x);
         *v_x = diff;
-        self.interp.registers.v[0xF] = !overflowed as u8;
+        self.interp.reg_v[0xF] = !overflowed as u8;
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xyE(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        let v_y = self.interp.registers.v[y as usize];
+        let v_y = self.interp.reg_v[y as usize];
         let msb = v_y >> 7;
-        self.interp.registers.v[x as usize] = v_y << 1;
-        self.interp.registers.v[0xF] = msb;
+        self.interp.reg_v[x as usize] = v_y << 1;
+        self.interp.reg_v[0xF] = msb;
         ProgramCounterChange::Next
     }
 
     pub fn instr_9xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        if self.interp.registers.v[x as usize] != self.interp.registers.v[y as usize] {
+        if self.interp.reg_v[x as usize] != self.interp.reg_v[y as usize] {
             ProgramCounterChange::Skip
         } else {
             ProgramCounterChange::Next
@@ -145,39 +145,39 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_Annn(&mut self, nnn: u16) -> ProgramCounterChange {
-        self.interp.registers.i = nnn;
+        self.interp.reg_i = nnn;
         ProgramCounterChange::Next
     }
 
     pub fn instr_Bnnn(&mut self, nnn: u16) -> ProgramCounterChange {
-        let loc = nnn + self.interp.registers.v[0x0] as u16;
+        let loc = nnn + self.interp.reg_v[0x0] as u16;
         ProgramCounterChange::Jump(loc as usize)
     }
 
     pub fn instr_Cxkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
         let rand_byte = rand::random::<u8>();
-        self.interp.registers.v[x as usize] = rand_byte & kk;
+        self.interp.reg_v[x as usize] = rand_byte & kk;
         ProgramCounterChange::Next
     }
 
     pub fn instr_Dxyn(&mut self, x: u8, y: u8, n: u8) -> ProgramCounterChange {
         let p = &mut self.interp;
-        let x_pos = p.registers.v[x as usize] as usize;
-        let y_pos = p.registers.v[y as usize] as usize;
+        let x_pos = p.reg_v[x as usize] as usize;
+        let y_pos = p.reg_v[y as usize] as usize;
 
         if x_pos > 0x3F || y_pos > 0x1F {
-            p.registers.v[0xF] = 0;
+            p.reg_v[0xF] = 0;
             return ProgramCounterChange::Next;
         }
 
-        let sprite = p.memory.read_sprite(p.registers.i as usize, n as usize);
+        let sprite = p.memory.read_sprite(p.reg_i as usize, n as usize);
         let collision = p.display_buf.write_sprite(sprite, x_pos, y_pos);
-        p.registers.v[0xF] = collision as u8;
+        p.reg_v[0xF] = collision as u8;
         ProgramCounterChange::Next
     }
 
     pub fn instr_Ex9E(&mut self, x: u8) -> ProgramCounterChange {
-        let hex_key = self.interp.registers.v[x as usize] as usize;
+        let hex_key = self.interp.reg_v[x as usize] as usize;
         if self.interp.keyboard_state.key[hex_key] {
             ProgramCounterChange::Skip
         } else {
@@ -186,7 +186,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_ExA1(&mut self, x: u8) -> ProgramCounterChange {
-        let hex_key = self.interp.registers.v[x as usize] as usize;
+        let hex_key = self.interp.reg_v[x as usize] as usize;
         if self.interp.keyboard_state.key[hex_key] {
             ProgramCounterChange::Next
         } else {
@@ -195,13 +195,13 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_Fx07(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.registers.v[x as usize] = self.interp.timers.delay_timer;
+        self.interp.reg_v[x as usize] = self.interp.timers.delay_timer;
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx0A(&mut self, x: u8) -> ProgramCounterChange {
         if let Some(key) = self.interp.keyboard_state.any_pressed() {
-            self.interp.registers.v[x as usize] = key as u8;
+            self.interp.reg_v[x as usize] = key as u8;
             ProgramCounterChange::Next
         } else {
             ProgramCounterChange::Wait
@@ -209,31 +209,31 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_Fx15(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.timers.delay_timer = self.interp.registers.v[x as usize];
+        self.interp.timers.delay_timer = self.interp.reg_v[x as usize];
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx18(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.timers.sound_timer = self.interp.registers.v[x as usize];
+        self.interp.timers.sound_timer = self.interp.reg_v[x as usize];
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx1E(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.registers.i += self.interp.registers.v[x as usize] as u16;
+        self.interp.reg_i += self.interp.reg_v[x as usize] as u16;
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx29(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.registers.i =
-            self.interp
-                .memory
-                .sprite_address(self.interp.registers.v[x as usize]) as u16;
+        self.interp.reg_i = self
+            .interp
+            .memory
+            .sprite_address(self.interp.reg_v[x as usize]) as u16;
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx33(&mut self, x: u8) -> ProgramCounterChange {
-        let value = self.interp.registers.v[x as usize];
-        let i = self.interp.registers.i as usize;
+        let value = self.interp.reg_v[x as usize];
+        let i = self.interp.reg_i as usize;
         self.interp.memory.write_byte(i, value / 100);
         self.interp.memory.write_byte(i + 1, value % 100 / 10);
         self.interp.memory.write_byte(i + 2, value % 10);
@@ -242,20 +242,20 @@ impl<'a> InstructionExecutor<'a> {
 
     pub fn instr_Fx55(&mut self, x: u8) -> ProgramCounterChange {
         let x = x as usize;
-        let i = self.interp.registers.i as usize;
+        let i = self.interp.reg_i as usize;
         for offset in 0..=x {
             self.interp
                 .memory
-                .write_byte(i + offset, self.interp.registers.v[offset]);
+                .write_byte(i + offset, self.interp.reg_v[offset]);
         }
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx65(&mut self, x: u8) -> ProgramCounterChange {
         let x = x as usize;
-        let i = self.interp.registers.i as usize;
+        let i = self.interp.reg_i as usize;
         for offset in 0..=x {
-            self.interp.registers.v[offset] = self.interp.memory.read_byte(i + offset);
+            self.interp.reg_v[offset] = self.interp.memory.read_byte(i + offset);
         }
         ProgramCounterChange::Next
     }

@@ -8,13 +8,15 @@ use winit::event::VirtualKeyCode;
 
 pub struct Interpreter {
     memory: Memory,
-    registers: Registers,
     stack: Stack,
     display_buf: DisplayBuffer,
     timers: Timers,
     keyboard_state: KeyboardState,
 
     program_counter: usize,
+    reg_i: u16,
+    reg_v: [u8; 16],
+
     cycle_delay: Duration,
     last_cycle: Instant,
 }
@@ -26,13 +28,15 @@ impl Interpreter {
 
         Interpreter {
             memory,
-            registers: Registers::new(),
             stack: Stack::new(),
             display_buf: DisplayBuffer::new(),
             timers: Timers::new(),
             keyboard_state: KeyboardState::new(),
 
             program_counter: 0x200,
+            reg_i: 0,
+            reg_v: [0; 16],
+
             cycle_delay: Duration::from_millis(1),
             last_cycle: Instant::now(),
         }
@@ -56,17 +60,6 @@ impl Interpreter {
 
     pub fn handle_input(&mut self, key_code: VirtualKeyCode, pressed: bool) {
         self.keyboard_state.handle_input(key_code, pressed);
-    }
-}
-
-struct Registers {
-    i: u16,
-    v: [u8; 16],
-}
-
-impl Registers {
-    pub fn new() -> Self {
-        Registers { i: 0, v: [0; 16] }
     }
 }
 
