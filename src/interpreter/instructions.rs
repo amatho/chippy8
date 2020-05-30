@@ -14,6 +14,14 @@ impl<'a> InstructionExecutor<'a> {
         self.interp
     }
 
+    fn reg_v(&self, index: u8) -> u8 {
+        self.interp.reg_v[index as usize]
+    }
+
+    fn set_reg_v(&mut self, index: u8, value: u8) {
+        self.interp.reg_v[index as usize] = value;
+    }
+
     pub fn instr_00E0(&mut self) -> ProgramCounterChange {
         self.interp.display_buf.clear();
         ProgramCounterChange::Next
@@ -37,7 +45,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_3xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
-        if self.interp.reg_v[x as usize] == kk {
+        if self.reg_v(x) == kk {
             ProgramCounterChange::Skip
         } else {
             ProgramCounterChange::Next
@@ -45,7 +53,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_4xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
-        if self.interp.reg_v[x as usize] != kk {
+        if self.reg_v(x) != kk {
             ProgramCounterChange::Skip
         } else {
             ProgramCounterChange::Next
@@ -53,7 +61,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_5xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        if self.interp.reg_v[x as usize] == self.interp.reg_v[y as usize] {
+        if self.reg_v(x) == self.reg_v(y) {
             ProgramCounterChange::Skip
         } else {
             ProgramCounterChange::Next
@@ -61,39 +69,38 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_6xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
-        self.interp.reg_v[x as usize] = kk;
+        self.set_reg_v(x, kk);
         ProgramCounterChange::Next
     }
 
     pub fn instr_7xkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
-        let x = x as usize;
-        self.interp.reg_v[x] = self.interp.reg_v[x].wrapping_add(kk);
+        self.set_reg_v(x, self.reg_v(x).wrapping_add(kk));
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        self.interp.reg_v[x as usize] = self.interp.reg_v[y as usize];
+        self.set_reg_v(x, self.reg_v(y));
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy1(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        self.interp.reg_v[x as usize] |= self.interp.reg_v[y as usize];
+        self.set_reg_v(x, self.reg_v(x) | self.reg_v(y));
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy2(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        self.interp.reg_v[x as usize] &= self.interp.reg_v[y as usize];
+        self.set_reg_v(x, self.reg_v(x) & self.reg_v(y));
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy3(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        self.interp.reg_v[x as usize] ^= self.interp.reg_v[y as usize];
+        self.set_reg_v(x, self.reg_v(x) ^ self.reg_v(y));
         ProgramCounterChange::Next
     }
 
     pub fn instr_8xy4(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        let v_y = self.interp.reg_v[y as usize];
-        let v_x = &mut self.interp.reg_v[x as usize];
+        let v_y = self.reg_v(y);
+        let v_x = &mut self.reg_v(x);
         let (sum, overflowed) = v_x.overflowing_add(v_y);
         *v_x = sum;
         self.interp.reg_v[0xF] = overflowed as u8;
@@ -101,8 +108,8 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_8xy5(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        let v_y = self.interp.reg_v[y as usize];
-        let v_x = &mut self.interp.reg_v[x as usize];
+        let v_y = self.reg_v(y);
+        let v_x = &mut self.reg_v(x);
         let (diff, overflowed) = v_x.overflowing_sub(v_y);
         *v_x = diff;
         self.interp.reg_v[0xF] = !overflowed as u8;
@@ -120,8 +127,8 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_8xy7(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        let v_y = self.interp.reg_v[y as usize];
-        let v_x = &mut self.interp.reg_v[x as usize];
+        let v_y = self.reg_v(y);
+        let v_x = &mut self.reg_v(x);
         let (diff, overflowed) = v_y.overflowing_sub(*v_x);
         *v_x = diff;
         self.interp.reg_v[0xF] = !overflowed as u8;
@@ -129,15 +136,15 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_8xyE(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        let v_y = self.interp.reg_v[y as usize];
+        let v_y = self.reg_v(y);
         let msb = v_y >> 7;
-        self.interp.reg_v[x as usize] = v_y << 1;
+        self.set_reg_v(x, v_y << 1);
         self.interp.reg_v[0xF] = msb;
         ProgramCounterChange::Next
     }
 
     pub fn instr_9xy0(&mut self, x: u8, y: u8) -> ProgramCounterChange {
-        if self.interp.reg_v[x as usize] != self.interp.reg_v[y as usize] {
+        if self.reg_v(x) != self.reg_v(y) {
             ProgramCounterChange::Skip
         } else {
             ProgramCounterChange::Next
@@ -156,7 +163,7 @@ impl<'a> InstructionExecutor<'a> {
 
     pub fn instr_Cxkk(&mut self, x: u8, kk: u8) -> ProgramCounterChange {
         let rand_byte = rand::random::<u8>();
-        self.interp.reg_v[x as usize] = rand_byte & kk;
+        self.set_reg_v(x, rand_byte & kk);
         ProgramCounterChange::Next
     }
 
@@ -177,7 +184,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_Ex9E(&mut self, x: u8) -> ProgramCounterChange {
-        let hex_key = self.interp.reg_v[x as usize] as usize;
+        let hex_key = self.reg_v(x) as usize;
         if self.interp.keyboard_state.key[hex_key] {
             ProgramCounterChange::Skip
         } else {
@@ -186,7 +193,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_ExA1(&mut self, x: u8) -> ProgramCounterChange {
-        let hex_key = self.interp.reg_v[x as usize] as usize;
+        let hex_key = self.reg_v(x) as usize;
         if self.interp.keyboard_state.key[hex_key] {
             ProgramCounterChange::Next
         } else {
@@ -195,13 +202,13 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_Fx07(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.reg_v[x as usize] = self.interp.timers.delay_timer;
+        self.set_reg_v(x, self.interp.timers.delay_timer);
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx0A(&mut self, x: u8) -> ProgramCounterChange {
         if let Some(key) = self.interp.keyboard_state.any_pressed() {
-            self.interp.reg_v[x as usize] = key as u8;
+            self.set_reg_v(x, key as u8);
             ProgramCounterChange::Next
         } else {
             ProgramCounterChange::Wait
@@ -209,30 +216,27 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_Fx15(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.timers.delay_timer = self.interp.reg_v[x as usize];
+        self.interp.timers.delay_timer = self.reg_v(x);
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx18(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.timers.sound_timer = self.interp.reg_v[x as usize];
+        self.interp.timers.sound_timer = self.reg_v(x);
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx1E(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.reg_i += self.interp.reg_v[x as usize] as u16;
+        self.interp.reg_i += self.reg_v(x) as u16;
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx29(&mut self, x: u8) -> ProgramCounterChange {
-        self.interp.reg_i = self
-            .interp
-            .memory
-            .sprite_address(self.interp.reg_v[x as usize]) as u16;
+        self.interp.reg_i = self.interp.memory.sprite_address(self.reg_v(x)) as u16;
         ProgramCounterChange::Next
     }
 
     pub fn instr_Fx33(&mut self, x: u8) -> ProgramCounterChange {
-        let value = self.interp.reg_v[x as usize];
+        let value = self.reg_v(x);
         let i = self.interp.reg_i as usize;
         self.interp.memory.write_byte(i, value / 100);
         self.interp.memory.write_byte(i + 1, value % 100 / 10);
