@@ -30,7 +30,6 @@ impl Timers {
 
         if self.sound_timer > 0 {
             self.sound_timer -= 1;
-            println!("BEEP!");
         }
     }
 }
