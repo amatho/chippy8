@@ -75,8 +75,6 @@ impl Memory {
     }
 
     pub fn load_rom(&mut self, rom: &[u8]) {
-        for (i, &byte) in rom.iter().enumerate() {
-            self.bytes[0x200 + i] = byte;
-        }
+        self.bytes[0x200..0x200 + rom.len()].copy_from_slice(rom);
     }
 }
