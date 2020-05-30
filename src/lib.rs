@@ -40,7 +40,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         Pixels::new(64, 32, surface_texture)?
     };
 
-    let mut processor = Interpreter::new(&game_data);
+    let mut interpreter = Interpreter::new(&game_data);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -48,9 +48,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         match event {
             Event::MainEventsCleared => window.request_redraw(),
             Event::RedrawRequested(_) => {
-                processor.run_cycle();
+                interpreter.run_cycle();
 
-                let display_buffer = processor.get_display_buffer();
+                let display_buffer = interpreter.get_display_buffer();
                 render(display_buffer, &mut pixels).unwrap();
             }
             Event::WindowEvent {
@@ -69,7 +69,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 if key_code == event::VirtualKeyCode::Escape {
                     *control_flow = ControlFlow::Exit;
                 } else {
-                    processor.handle_input(key_code, state == event::ElementState::Pressed);
+                    interpreter.handle_input(key_code, state == event::ElementState::Pressed);
                 }
             }
             Event::WindowEvent {
