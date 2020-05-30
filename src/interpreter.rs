@@ -8,11 +8,11 @@ use winit::event::VirtualKeyCode;
 
 pub struct Interpreter {
     memory: Memory,
-    stack: Stack,
     display_buf: DisplayBuffer,
     timers: Timers,
     keyboard_state: KeyboardState,
 
+    stack: Vec<u16>,
     program_counter: usize,
     reg_i: u16,
     reg_v: [u8; 16],
@@ -28,11 +28,11 @@ impl Interpreter {
 
         Interpreter {
             memory,
-            stack: Stack::new(),
             display_buf: DisplayBuffer::new(),
             timers: Timers::new(),
             keyboard_state: KeyboardState::new(),
 
+            stack: Vec::with_capacity(16),
             program_counter: 0x200,
             reg_i: 0,
             reg_v: [0; 16],
@@ -60,30 +60,5 @@ impl Interpreter {
 
     pub fn handle_input(&mut self, key_code: VirtualKeyCode, pressed: bool) {
         self.keyboard_state.handle_input(key_code, pressed);
-    }
-}
-
-struct Stack {
-    inner: Vec<u16>,
-    stack_pointer: u8,
-}
-
-impl Stack {
-    fn new() -> Self {
-        Stack {
-            inner: Vec::with_capacity(16),
-            stack_pointer: 0,
-        }
-    }
-
-    fn push(&mut self, value: u16) {
-        self.inner.push(value);
-        self.stack_pointer += 1;
-    }
-
-    fn pop(&mut self) -> u16 {
-        let val = self.inner.pop().expect("unexpected end of stack");
-        self.stack_pointer -= 1;
-        val
     }
 }

@@ -20,7 +20,7 @@ impl<'a> InstructionExecutor<'a> {
     }
 
     pub fn instr_00EE(&mut self) -> ProgramCounterChange {
-        let pc = self.interp.stack.pop() as usize;
+        let pc = self.interp.stack.pop().unwrap() as usize;
         ProgramCounterChange::Jump(pc)
     }
 
