@@ -6,6 +6,6 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
-pixels = "0.0.4"
-winit = "0.22.2"
-rand = "0.7.3"
+pixels = "0.3.0"
+winit = "0.25.0"
+rand = "0.8.3"

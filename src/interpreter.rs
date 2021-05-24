@@ -2,7 +2,7 @@ mod fetch_execute;
 mod instructions;
 
 use crate::{display::DisplayBuffer, keyboard::KeyboardState, memory::Memory, timer::Timers};
-use fetch_execute::OpcodeFetchExecute;
+use fetch_execute::{Executor, Fetcher};
 use std::time::{Duration, Instant};
 use winit::event::VirtualKeyCode;
 
@@ -49,7 +49,8 @@ impl Interpreter {
         }
         self.last_cycle = now;
 
-        OpcodeFetchExecute::fetch(self).execute();
+        let opcode = Fetcher::fetch(self);
+        Executor::execute(self, opcode);
 
         self.timers.tick();
     }
@@ -60,5 +61,15 @@ impl Interpreter {
 
     pub fn handle_input(&mut self, key_code: VirtualKeyCode, pressed: bool) {
         self.keyboard_state.handle_input(key_code, pressed);
+    }
+
+    /// Returns a copy of the value in register `v`.
+    fn reg_v(&self, index: u8) -> u8 {
+        self.reg_v[index as usize]
+    }
+
+    /// Returns a mutable reference to the value in register `v`.
+    fn reg_v_mut(&mut self, index: u8) -> &mut u8 {
+        self.reg_v.get_mut(index as usize).unwrap()
     }
 }

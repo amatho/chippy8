@@ -5,7 +5,7 @@ mod memory;
 mod timer;
 
 use interpreter::Interpreter;
-use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
+use pixels::{Pixels, SurfaceTexture};
 use std::fs::File;
 use std::io::Read;
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -35,8 +35,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .build(&event_loop)?;
 
     let mut pixels = {
-        let surface = Surface::create(&window);
-        let surface_texture = SurfaceTexture::new(WINDOW_WIDTH, WINDOW_HEIGHT, surface);
+        let surface_texture = SurfaceTexture::new(WINDOW_WIDTH, WINDOW_HEIGHT, &window);
         Pixels::new(64, 32, surface_texture)?
     };
 
@@ -51,7 +50,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 interpreter.run_cycle();
 
                 let display_buffer = interpreter.get_display_buffer();
-                render(display_buffer, &mut pixels).unwrap();
+                render(display_buffer, pixels.get_frame());
+                pixels.render().unwrap();
             }
             Event::WindowEvent {
                 event:
@@ -81,9 +81,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     });
 }
 
-fn render(display_buffer: &[bool], pixels: &mut Pixels) -> Result<(), pixels::Error> {
-    let pixel_buffer = pixels.get_frame();
-    for (dp, pixel) in display_buffer.iter().zip(pixel_buffer.chunks_exact_mut(4)) {
+fn render(display_buffer: &[bool], frame: &mut [u8]) {
+    for (pixel, dp) in frame.chunks_exact_mut(4).zip(display_buffer.iter()) {
         let rgba = match dp {
             true => [255, 255, 255, 255],
             _ => [0, 0, 0, 255],
@@ -91,6 +90,4 @@ fn render(display_buffer: &[bool], pixels: &mut Pixels) -> Result<(), pixels::Er
 
         pixel.copy_from_slice(&rgba);
     }
-
-    pixels.render()
 }
