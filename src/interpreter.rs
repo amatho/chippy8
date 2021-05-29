@@ -2,8 +2,10 @@ mod fetch_execute;
 mod instructions;
 
 use crate::{display::DisplayBuffer, keyboard::KeyboardState, memory::Memory, timer::Timers};
-use fetch_execute::{Executor, Fetcher};
-use std::time::{Duration, Instant};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 use winit::event::VirtualKeyCode;
 
 pub struct Interpreter {
@@ -37,22 +39,29 @@ impl Interpreter {
             reg_i: 0,
             reg_v: [0; 16],
 
-            cycle_delay: Duration::from_millis(1),
+            cycle_delay: Duration::from_millis(2),
             last_cycle: Instant::now(),
         }
     }
 
     pub fn run_cycle(&mut self) {
+        // TODO: Implement proper clock rate
         let now = Instant::now();
-        if now.duration_since(self.last_cycle) < self.cycle_delay {
-            return;
+        let diff = now - self.last_cycle;
+        let timers_diff = self.timers.tick();
+
+        if diff > self.cycle_delay {
+            self.last_cycle = now;
+            let opcode = self.fetch();
+            self.execute(opcode);
+        } else {
+            let smallest_diff = if diff > timers_diff {
+                diff
+            } else {
+                timers_diff
+            };
+            thread::sleep(smallest_diff);
         }
-        self.last_cycle = now;
-
-        let opcode = Fetcher::fetch(self);
-        Executor::execute(self, opcode);
-
-        self.timers.tick();
     }
 
     pub fn get_display_buffer(&self) -> &[bool; DisplayBuffer::SIZE] {

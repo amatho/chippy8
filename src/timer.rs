@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-const PERIOD: Duration = Duration::from_millis(16);
+const PERIOD: Duration = Duration::from_micros(16666);
 
 pub struct Timers {
     pub delay_timer: u8,
@@ -17,10 +17,11 @@ impl Timers {
         }
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> Duration {
         let now = Instant::now();
-        if now.duration_since(self.last_tick) < PERIOD {
-            return;
+        let diff = now - self.last_tick;
+        if diff < PERIOD {
+            return diff;
         }
         self.last_tick = now;
 
@@ -31,5 +32,7 @@ impl Timers {
         if self.sound_timer > 0 {
             self.sound_timer -= 1;
         }
+
+        Duration::ZERO
     }
 }

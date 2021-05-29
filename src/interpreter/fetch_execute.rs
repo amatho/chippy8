@@ -38,26 +38,22 @@ impl Debug for Opcode {
     }
 }
 
-pub struct Fetcher;
-
-impl Fetcher {
-    pub fn fetch(interp: &mut Interpreter) -> Opcode {
+impl Interpreter {
+    pub fn fetch(&mut self) -> Opcode {
         let opcode = Opcode::new(
-            interp.memory.read_byte(interp.program_counter),
-            interp.memory.read_byte(interp.program_counter + 1),
+            self.memory.read_byte(self.program_counter),
+            self.memory.read_byte(self.program_counter + 1),
         );
 
-        interp.program_counter += 2;
+        self.program_counter += 2;
 
         opcode
     }
 }
 
-pub struct Executor;
-
-impl Executor {
-    pub fn execute(interp: &mut Interpreter, opcode: Opcode) {
-        let p = interp;
+impl Interpreter {
+    pub fn execute(&mut self, opcode: Opcode) {
+        let p = self;
         let control_flow = match opcode.nibbles {
             // 00E0
             [0x0, 0x0, 0xE, 0x0] => instr::instr_00E0(p),
