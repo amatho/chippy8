@@ -2,10 +2,10 @@
 name = "chippy8"
 version = "0.1.0"
 authors = ["Amandus Søve Thorsrud <ama.thorsrud@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 
 [dependencies]
-pixels = "0.3.0"
-winit = "0.25.0"
-rand = "0.8.3"
+pixels = "0.9.0"
+winit = "0.26.1"
+rand = "0.8.5"
